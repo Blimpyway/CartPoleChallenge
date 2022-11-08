@@ -241,7 +241,7 @@ def ValueMapPlayer(env, value_steps, value_bits):
 
 ############# Attempting to numba compile thing
 try:
-    from _numba import njit
+    from numba import njit
     state2sdr       = _state2sdr
     fast_encode     = njit(fast_encode,     cache = True)
     address_list    = njit(address_list,    cache = True)
