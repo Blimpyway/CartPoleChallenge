@@ -1,23 +1,19 @@
 """
-Cartpole using value maps example. 
+Cartpole using value maps and overlapping SDR encoder example. 
 
 The only dependencies are gym, numpy and optionally numba.
 If by any chance numba is installed, avoid blinking ;-)
 
-Average episodes needed to solve the environment is under 125.  
-
 By OpenAI's rules, the environment is considered solved when average no.of steps over the last 
 100 episodes exceeds 195 in CartPole-v0 or 475 in v1
-
-Average no. of failed episodes before solving is under 26 in v1.
 
 --------------
 For HTM folks 
 
-Encoder is a simple SDR scalar encoder which transforms the 4 value observations (aka env state) in
-a 16/68 SDR (68 is total SDR size, 16 bits are on) 
-Each state scalar is assigned an 1/4 slice of 4/17 bits which counts as a 14 value bins (VALUE_STEPS parameter)
-The encoder maximum values expand dynamically initial all 4 scalars are capped at 0.2
+The encoder converts each observation value to a scalar vector, the for scalar vectors are summed and 
+the SDR is obtained by picking smallest P values  
+See CycleEncoder function below and https://discourse.numenta.org/t/scalar-vectors-as-intermediate-stages/10259?u=cezar_t
+
 
 The values of "danger" are encoded in a simple bitpair value map over the 68 bit sized SDR. 
 Negative/Positive values means danger to move left/right in the state represented by the SDR.  
