@@ -15,7 +15,7 @@ the SDR is obtained by picking smallest P values
 See CycleEncoder function below and https://discourse.numenta.org/t/scalar-vectors-as-intermediate-stages/10259?u=cezar_t
 
 
-The values of "danger" are encoded in a simple bitpair value map over the 68 bit sized SDR. 
+The values of "danger" are encoded in a simple bitpair value map over the SDR_SIZE bit SDR. 
 Negative/Positive values means danger to move left/right in the state represented by the SDR.  
 
 -------------
