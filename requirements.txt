@@ -1,0 +1,14 @@
+cloudpickle==1.6.0
+gym==0.18.3
+gym-notices==0.0.8
+Gymnasium==0.26.3
+gymnasium-notices==0.0.1
+importlib-metadata==5.0.0
+llvmlite==0.39.1
+numba==0.56.4
+numpy==1.21.6
+Pillow==8.2.0
+pyglet==1.5.15
+scipy==1.7.3
+typing_extensions==4.4.0
+zipp==3.10.0
