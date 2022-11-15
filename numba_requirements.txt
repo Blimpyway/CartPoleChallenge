@@ -2,6 +2,8 @@ cloudpickle==2.2.0
 gym==0.26.2
 gym-notices==0.0.8
 importlib-metadata==5.0.0
+llvmlite==0.39.1
+numba==0.56.4
 numpy==1.23.4
 pygame==2.1.0
 zipp==3.10.0

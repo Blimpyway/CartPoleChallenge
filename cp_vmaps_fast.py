@@ -29,15 +29,18 @@ Copyright: blimpyway aka cezar_t
 
 import gym, random
 import numpy as np
+from time import sleep
 
 
 VALUE_STEPS = 14      # number of steps for state values
 VALUE_BITS  =  4      # SDR ON bits for each state value 
 
-DANGER_STEPS = 10     # These many steps preceding failure will be mapped as danger teritory
+# VALUE_STEPS, VALUE_BITS = 8,2
+DANGER_STEPS = 12     # These many steps preceding failure will be mapped as danger teritory
+DANGER_START = 10
 
-env=gym.make("CartPole-v1")     # solved in under 126 episodes over 1000 tests
-# env=gym.make("CartPole-v0")   # solved in ~115 episodes over 1000 tests
+CART_POLE = "CartPole-v1"       # solved in under 126 episodes over 1000 tests
+# CART_POLE = "CartPole-v0"     # solved in ~115 episodes over 1000 tests
 
 class Self: pass # Pseudo classes are cute
 
@@ -62,6 +65,7 @@ def _state2sdr(state_steps, state_bits, num_states):
     sdr_size = state_width * num_states
     # max_vals = np.ones(4) / 5
     max_vals = np.array([4.796713  , 6.4722023 , 0.41887885, 6.852011])/2
+    # max_vals = np.ones(4) - np.inf
     encode = lambda state: fast_encode(state, max_vals, state_steps, state_bits, state_width)
     return sdr_size, encode
 
@@ -127,7 +131,7 @@ def SimpleValueMap(sdr_size):
 
 #########################################################################################
 ####### Here-s the  player pseudo class
-def ValueMapPlayer(env, value_steps, value_bits): 
+def ValueMapPlayer(yenv, value_steps, value_bits): 
     """
     Returns a player that learns to balance the cartpole,
     parameters:
@@ -137,7 +141,8 @@ def ValueMapPlayer(env, value_steps, value_bits):
 
     """
     my = Self()
-    NUM_STATES = env.observation_space.sample().size
+    my.env = yenv
+    NUM_STATES = my.env.observation_space.sample().size
 
     sdr_size, to_sdr = state2sdr(value_steps, value_bits, NUM_STATES) 
     print(f"SDR size is {sdr_size}")
@@ -149,6 +154,8 @@ def ValueMapPlayer(env, value_steps, value_bits):
         """
         Chosing an action from observation
         """
+        # print(f"Observation in pick_action() is {obs}, type(): {type(obs)}")
+        # print(">", flush = True, end = '')
         sdr = to_sdr(obs)
         danger = my.vmap.read(sdr)
         if danger == 0: 
@@ -172,40 +179,46 @@ def ValueMapPlayer(env, value_steps, value_bits):
         """
         my.episodes.append(len(steps)) # Record the number of episode steps
         message = f"Ep. {len(my.episodes):3d} ran {my.episodes[-1]:3d} steps     "
-        if len(steps) < env.spec.max_episode_steps: # failed, something to learn
+        if len(steps) < my.env.spec.max_episode_steps: # failed, something to learn
             print("\n", message, end = " ", flush=True)
             danger = min(len(steps), DANGER_STEPS) if learning else 0  # if learn disabled, don't update vmap
             while danger: 
                 sdr, action = steps.pop()
                 left_or_right = int((action * 2) - 1) # Turns action into a [-1, 1] choice
-                my.vmap.add(sdr, left_or_right * (DANGER_STEPS + danger)) # ... I should explain..
+                my.vmap.add(sdr, left_or_right * (DANGER_START + danger)) # ... I should explain..
+                # my.vmap.add(sdr, left_or_right * danger) 
                 danger -= 1
         else:
             print("+", end = '', flush = True) # A '+' means episode is a success!
+            sleep(0.001)
             # print(message, end = '\r')
 
         steps.clear()
-        solved = len(my.episodes) >= 100 and np.mean(my.episodes[-100:]) > env.spec.reward_threshold
+        solved = len(my.episodes) >= 100 and np.mean(my.episodes[-100:]) > my.env.spec.reward_threshold
 
         return solved
 
-    def one_round(render = False, learning = True):
+    def one_round(learning = True):
         """
         Runs a single round
         """
         done = False
-        obs = env.reset()
+        obs, whatever = my.env.reset()
         while not done:
             action = pick_action(obs)
-            if render: env.render()
-            obs,reward,done,info = env.step(action)
+            obs,reward,done,trunc,info = my.env.step(action)
+            done = done or trunc
         return round_done(learning)
 
     def show(): 
         """
         Runs a rendered round without training. 
         """
-        success = one_round(render = True, learning = False)
+        senv = my.env
+        my.env = gym.make(senv.spec.id, render_mode = 'human')
+        success = one_round(learning = False)
+        my.env.close() 
+        my.env = senv
         print()
         return success
 
@@ -217,14 +230,14 @@ def ValueMapPlayer(env, value_steps, value_bits):
             max_episodes: give up if environment is not solved thus far.
         """
         for ep in range(max_episodes):
-            solved = one_round(render = render, learning = True) 
+            solved = one_round(learning = True) 
             if solved:
                 break 
         print('\n')
 
         total_episodes  = ep+1
         total_steps     = np.sum(my.episodes) 
-        failed_episodes = (np.array(my.episodes) < 500).sum()
+        failed_episodes = (np.array(my.episodes) < my.env.spec.max_episode_steps).sum()
         if solved: 
             print(f"Solved in {total_episodes} episodes, {total_steps} steps")
             print(f" {failed_episodes} of these episodes failed hence were needed to learn")
@@ -253,7 +266,7 @@ except Exception:
 
 
 # Shortcut for interactive mode
-Player = lambda: ValueMapPlayer(env, value_steps = VALUE_STEPS, value_bits = VALUE_BITS)
+Player = lambda: ValueMapPlayer(gym.make(CART_POLE), value_steps = VALUE_STEPS, value_bits = VALUE_BITS)
 
 p = Player() 
 
