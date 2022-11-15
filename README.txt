@@ -1,12 +1,18 @@
 Here-s an attempt to win OpenAI's gym CartPole contest combining Numenta's Sparse Distributed Representations with bitpair value maps. 
 
-Installation Note:
-==================
-Use 
+--------------- 
+Installation:
+Run either
 
-$ pip install -r requirements.txt 
+$ pip install -r requirements.txt
 
-in a new virtualenv since gym latest (and unmaintained) versions break compatibility with most demos/tutorials/papers published. 
+or 
+
+$ pip install -r numba_requirements.txt
+
+in a new virtualenv 
+
+-----------
 
 The two versions - cp_vmaps_fast.py and cp_vmap_ovenc.py - differ only through the encoding method used to transform the 4 value observation space into a SDR representation which is further used by populating a ValueMap with Q-values. 
 1. cp_vmaps_fast.py uses a simple scalar encoder where each observation value gets its own 1/4 allotment of the available SDR space. This one is both computationally inexpensive and more robust/reliable.  Episodes run to solve the CartPole-v1 are ~124 with ~26 failed (ended before 500 steps). Out of 1000 training sessions all converge in less than 300 episodes,  
