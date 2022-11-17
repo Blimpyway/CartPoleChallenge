@@ -29,13 +29,14 @@ import random
 import numpy as np
 
 # Different options for encoding SDR. Too sparse converge slow, too dense tend to be brittle
-SDR_SIZE, SDR_LEN =  40, 10
 SDR_SIZE, SDR_LEN = 160, 40
-SDR_SIZE, SDR_LEN =  68, 17
 SDR_SIZE, SDR_LEN =  80, 20
-SDR_SIZE, SDR_LEN = 100, 16
 SDR_SIZE, SDR_LEN = 120, 30
 SDR_SIZE, SDR_LEN = 120, 20
+SDR_SIZE, SDR_LEN = 100, 16
+SDR_SIZE, SDR_LEN =  68, 17
+SDR_SIZE, SDR_LEN =  40, 10  # Still converges 98% of trials
+SDR_SIZE, SDR_LEN = 160, 30
 
 DANGER_STEPS = 14     # These many steps preceding failure will be mapped as danger teritory
 DANGER_START = 10
@@ -70,7 +71,7 @@ def CycleEncoder(sdr_size, sdr_len, num_obs):
     # The choices below say whether to give the encoder a head start or not
     # maxims = np.zeros(num_obs) - np.inf    # totally dynamic no idea what obs space values would be
     # maxims = np.zeros(num_obs) + 0.2       # giving it a headstart (max angle settles a bit over 0.2
-    maxims = np.array([4.796713  , 6.4722023 , 0.41887885, 6.852011])  # quite an accurate match
+    maxims = np.array([4.796713  , 6.4722023 , 0.41887885, 6.852011]) / 2  # quite an accurate match
 
     def _dense(vals):
         avals = min_max_adjust(vals, maxims)
