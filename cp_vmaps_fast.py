@@ -29,9 +29,6 @@ Copyright: blimpyway aka cezar_t
 
 import gym, random
 import numpy as np
-from time import sleep
-
-
 VALUE_STEPS = 14      # number of steps for state values
 VALUE_BITS  =  4      # SDR ON bits for each state value 
 
@@ -189,8 +186,7 @@ def ValueMapPlayer(yenv, value_steps, value_bits):
                 # my.vmap.add(sdr, left_or_right * danger) 
                 danger -= 1
         else:
-            print("+", end = '', flush = True) # A '+' means episode is a success!
-            sleep(0.001)
+            print("+", end = '') # A '+' means episode is a success!
             # print(message, end = '\r')
 
         steps.clear()
