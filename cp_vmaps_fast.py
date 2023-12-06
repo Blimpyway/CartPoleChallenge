@@ -29,15 +29,12 @@ Copyright: blimpyway aka cezar_t
 
 import gym, random
 import numpy as np
-from time import sleep
-
-
 VALUE_STEPS = 14      # number of steps for state values
 VALUE_BITS  =  4      # SDR ON bits for each state value 
 
 # VALUE_STEPS, VALUE_BITS = 8,2
-DANGER_STEPS = 12     # These many steps preceding failure will be mapped as danger teritory
-DANGER_START = 10
+DANGER_STEPS = 10     # These many steps preceding failure will be mapped as danger teritory
+#DANGER_START = 10     # baseline amount of danger
 
 CART_POLE = "CartPole-v1"       # solved in under 126 episodes over 1000 tests
 # CART_POLE = "CartPole-v0"     # solved in ~115 episodes over 1000 tests
@@ -48,52 +45,25 @@ class Self: pass # Pseudo classes are cute
 ########################## there is a numba and non-numba variant
 
 # The fast_encode is njit-able by numba
-def fast_encode(state, max_vals, state_steps, state_bits, state_width):
-    for greater in np.where(np.abs(state) > max_vals):
-        max_vals[greater] = np.abs(state)[greater]
-    step_size = max_vals * 2 / state_steps
-    int_state = ((state + max_vals) / step_size - 0.5).astype(np.int32)
-    r = []
-    for i,v in enumerate(int_state): 
-        for bit in range(state_bits):
-            r.append(state_width*i+v+bit)
-    return np.uint32(r)
+def fast_encode(state, abs_max_vals, state_steps, state_bits, state_width):
+    abs_max_vals[:] = np.maximum(abs_max_vals, np.abs(state))
+    int_state = (
+        (state / abs_max_vals + 1) * state_steps / 2 \
+        - 0.5 # round
+    ).astype(np.int32)
+    base = np.arange(int_state.size, dtype=np.uint32) * state_width + int_state
+    repeat = np.arange(state_bits, dtype=np.uint32)
+    return (base.reshape((-1, 1)) + repeat.reshape((1, -1))).flatten().astype(np.uint32)
 
 # This will be used (njit-compiled) if numba can be imported
-def _state2sdr(state_steps, state_bits, num_states):
+def state2sdr(state_steps, state_bits, num_states):
     state_width = state_steps + state_bits - 1
     sdr_size = state_width * num_states
-    # max_vals = np.ones(4) / 5
-    max_vals = np.array([4.796713  , 6.4722023 , 0.41887885, 6.852011])/2
-    # max_vals = np.ones(4) - np.inf
-    encode = lambda state: fast_encode(state, max_vals, state_steps, state_bits, state_width)
+    #hand picked initial values to speed up convergence
+    #abs_max_vals = np.array([4.796713  , 6.4722023 , 0.41887885, 6.852011])/2
+    abs_max_vals = np.zeros(4)
+    encode = lambda state: fast_encode(state, abs_max_vals, state_steps, state_bits, state_width)
     return sdr_size, encode
-
-# An auto-calibrating observation to sdr converter. 
-# Observed values are assumed to be "symmetrical" around 0.0 
-def state2sdr(state_steps, state_bits, num_states): 
-    state_width = state_steps + state_bits - 1 
-    sdr_size = state_width * num_states 
-    max_vals = np.ones(4) / 5
-    # max_vals = np.ones(4) - np.inf # if one complains the above initialisation is handcrafted...
-    starts = np.arange(num_states) * state_width
-    out = np.zeros(num_states*state_bits,dtype = np.int32)
-    for s in range(num_states): 
-        for b in range(state_bits): 
-            out[s*state_bits+b] = state_width * s + b
-    def encode(state): 
-        bigger = max_vals < np.abs(state)
-        max_vals[bigger] = np.abs(state[bigger])
-        step_size = max_vals * 2 / state_steps
-        int_state = ((state + max_vals) / step_size - 0.5).astype(np.int32)
-        oout = out.copy()
-        for i in range(num_states): 
-            ostart = i * state_bits
-            oout[ostart:ostart+state_bits] += int_state[i]
-        return oout   
-    return sdr_size, encode
-
-
 
 ######################################################################################3
 ###### Simplified ValueMap code
@@ -103,9 +73,13 @@ def address_list(sdr):
     Converts a SDR to a list of value map addresses
     """
     ret = []
+    
     for i in range(1, len(sdr)):
         ival = (sdr[i]*(sdr[i]-1))//2
         for j in range(i):
+		    # `sdr` is sorted
+		    # j is smaller
+		    # (i,j) is bit-pair
             ret.append((ival + sdr[j]))
     return ret
 
@@ -185,12 +159,12 @@ def ValueMapPlayer(yenv, value_steps, value_bits):
             while danger: 
                 sdr, action = steps.pop()
                 left_or_right = int((action * 2) - 1) # Turns action into a [-1, 1] choice
-                my.vmap.add(sdr, left_or_right * (DANGER_START + danger)) # ... I should explain..
-                # my.vmap.add(sdr, left_or_right * danger) 
+                # associate danger with (sdr state of) observed environment
+                #my.vmap.add(sdr, left_or_right * (DANGER_START + danger))
+                my.vmap.add(sdr, left_or_right * danger) 
                 danger -= 1
         else:
-            print("+", end = '', flush = True) # A '+' means episode is a success!
-            sleep(0.001)
+            print("+", end = '') # A '+' means episode is a success!
             # print(message, end = '\r')
 
         steps.clear()
@@ -255,7 +229,6 @@ def ValueMapPlayer(yenv, value_steps, value_bits):
 ############# Attempting to numba compile thing
 try:
     from numba import njit
-    state2sdr       = _state2sdr
     fast_encode     = njit(fast_encode,     cache = True)
     address_list    = njit(address_list,    cache = True)
     add_val         = njit(add_val,         cache = True)
