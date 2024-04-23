@@ -143,8 +143,6 @@ def ValueMapPlayer(yenv, sdr_size, sdr_len):
     my = Self()
     my.env = yenv
     num_vals = my.env.observation_space.sample().size
-    # global to_sdr
-    # if to_sdr is None:   to_sdr = CycleEncoder(sdr_size, sdr_len, num_vals) 
     to_sdr = CycleEncoder(sdr_size, sdr_len, num_vals) 
     print(f"SDR size is {sdr_size}")
     steps = []  # Records (state-SDR, action) for every step in an episode
