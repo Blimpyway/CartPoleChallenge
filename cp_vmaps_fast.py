@@ -276,22 +276,3 @@ print("Let's show off..")
 
 p.show()
 
-"""
-# Example results
-{
- 'trials': 1000,
- 'failed episodes min, max, mean': (3, 112, 26.352), # some trials learn after 3 failed episodes
- 'time msec': 643,
- 'tsteps': 52297739,
- 'results min, max, mean': (100, 283, 124.521)
-}
-
-# With the settings:
-
-VALUE_STEPS = 14      # number of steps for state values
-VALUE_BITS  =  4      # SDR ON bits for each state value
-
-DANGER_STEPS = 10     # These many steps preceding failure will be mapped as danger teritory
-
-
-"""
